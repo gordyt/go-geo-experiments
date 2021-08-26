@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	input  = flag.String("--input-format", XYZ, "input format")
-	output = flag.String("--output-format", ENU, "output format")
+	input  = flag.String("--input-format", GPS, "input format")
+	output = flag.String("--output-format", NED, "output format")
 	help   = flag.Bool("--help", false, "if true, print help and exit")
 )
 
@@ -22,7 +22,9 @@ const (
 	LLA = "LLA"
 	XYZ = "XYZ"
 	ENU = "ENU"
-	//valConstructs = map[string]func
+	NED = "NED"
+	GPS = "GPS"			// latitude, longitude, altitude above mean sea level
+	COE = 6371146
 )
 
 func usage() {
@@ -48,22 +50,20 @@ func main() {
 		}
 		args[i] = val
 	}
-	// 161 Willow
-	ref := geo.LLA{
-		Latitude:  29.99504406861832,
-		Longitude: -95.25508907331802,
-		Altitude:  27.0,
-	}
-	log.Printf("[INFO][main] REF=%+v", ref)
-	xyz := geo.XYZ{X: geo.Meters(args[0]), Y: geo.Meters(args[1]), Z: geo.Meters(args[2])}
-	log.Printf("[INFO][main] XYZ=%+v", xyz)
 	wsg := geo.WGS84()
-	log.Printf("[INFO][main] WSG=%+v", wsg)
+	lla := geo.LLA{Latitude: geo.Degrees(args[0]), Longitude: geo.Degrees(args[1]), Altitude: geo.Meters(args[2] + COE)}
+	xyz := wsg.LLAToXYZ(lla)
+	log.Printf("[INFO][main] XYZ (from args)=%+v", xyz)
+	log.Printf("[INFO][main] WSG (just defining receiver)=%+v", wsg)
+	// 161 Willow
+	ref := lla
+	log.Printf("[INFO][main] LLA REF (161 Willow)=%+v", ref)
 	enu := wsg.XYZToENU(ref, xyz)
 	log.Printf("[INFO][main] ENU=%+v", enu)
 	ned := wsg.XYZToNED(ref, xyz)
 	log.Printf("[INFO][main] NED=%+v", ned)
 	xyz2 := wsg.ENUToXYZ(ref, enu)
-	log.Printf("[INFO][main] xyz2 = %+v", xyz2)
-
+	log.Printf("[INFO][main] XYZ (converted back from ENU)= %+v", xyz2)
+	xyz3 := wsg.NEDToXYZ(ref, ned)
+	log.Printf("[INFO][main] XYZ (converted back from NED)= %+v", xyz3)
 }
